@@ -1,0 +1,3 @@
+1) venv\Scripts\activate
+2) cd cross_lingual_retrieval
+3) streamlit run web_app\streamlit_app.py
