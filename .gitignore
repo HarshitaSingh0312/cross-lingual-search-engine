@@ -18,11 +18,9 @@ cross_lingual_retrieval/data/
 cross_lingual_retrieval/models/
 cross_lingual_retrieval/colab_encoding/
 
-# Terraform (Phase 15)
-.terraform/
-*.tfstate
-*.tfstate.*
-*.tfvars
+# Personal planning docs — not for the public repo
+explanation_for_you.md
+PROJECT_PLAN.md
 
 # IDE / OS
 .vscode/
@@ -30,8 +28,8 @@ cross_lingual_retrieval/colab_encoding/
 .DS_Store
 Thumbs.db
 
-# Claude Code local settings
-.claude/settings.local.json
+# Claude Code local config/tooling — never part of the repo
+.claude/
 
 # Logs
 *.log
