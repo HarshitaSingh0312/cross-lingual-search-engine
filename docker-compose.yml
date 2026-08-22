@@ -1,0 +1,50 @@
+# Local dev only — Render builds backend/Dockerfile directly in production, no compose there.
+# See PROJECT_PLAN.md Section 3/9.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: crosslingual
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      # Local-only credentials for the throwaway compose Postgres, unrelated to the Neon
+      # instance used in backend/.env for bare-metal dev. No sslmode here, so
+      # Settings.db_connect_args resolves to no SSL — matches this container's Postgres.
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/crosslingual
+      REDIS_URL: redis://redis:6379/0
+      # hf_xet (huggingface_hub's fast-transfer backend) stalls badly over Docker
+      # Desktop's WSL2 NAT — falls back to the plain HTTP downloader instead.
+      HF_HUB_DISABLE_XET: "1"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+
+volumes:
+  pg_data:
+  hf_cache:

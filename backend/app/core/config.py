@@ -30,6 +30,15 @@ class Settings(BaseSettings):
         parsed = urlparse(self.database_url)
         return urlunparse(parsed._replace(scheme="postgresql+psycopg2"))
 
+    @property
+    def db_connect_args(self) -> dict:
+        """asyncpg wants ssl passed as a connect arg, not a URL query param. Only require
+        it when the source DATABASE_URL asked for it (Neon does; the local Docker Postgres
+        container doesn't have SSL configured at all)."""
+        parsed = urlparse(self.database_url)
+        query = dict(parse_qsl(parsed.query))
+        return {"ssl": "require"} if query.get("sslmode") == "require" else {}
+
 
 @lru_cache
 def get_settings() -> Settings:

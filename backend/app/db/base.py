@@ -5,7 +5,7 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-engine = create_async_engine(settings.async_database_url, connect_args={"ssl": "require"})
+engine = create_async_engine(settings.async_database_url, connect_args=settings.db_connect_args)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 

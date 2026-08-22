@@ -1,0 +1,24 @@
+.git/
+.claude/
+venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.vscode/
+.idea/
+
+# Never bake real secrets into the image — docker-compose passes DATABASE_URL etc.
+# as environment variables instead.
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Not needed by the running backend or the seed script (which only reads data/).
+cross_lingual_retrieval/models/
+cross_lingual_retrieval/colab_encoding/
+
+# Not part of the backend image build.
+frontend/
+docs/
+explanation_for_you.md
+PROJECT_PLAN.md
