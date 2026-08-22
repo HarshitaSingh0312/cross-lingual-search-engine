@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     # Existing ML core lives one level up from backend/; ingestion reads its cached data.
     ml_core_dir: str = "../cross_lingual_retrieval"
 
+    jwt_secret_key: str
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+
     @property
     def async_database_url(self) -> str:
         """asyncpg driver, used by the running app. asyncpg doesn't understand

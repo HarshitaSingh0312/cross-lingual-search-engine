@@ -32,6 +32,9 @@ services:
       # Settings.db_connect_args resolves to no SSL — matches this container's Postgres.
       DATABASE_URL: postgresql://postgres:postgres@db:5432/crosslingual
       REDIS_URL: redis://redis:6379/0
+      # Local-dev-only value, fine to keep in plain compose YAML (unlike the real Neon
+      # creds above, this isn't a shared secret protecting anything outside this container).
+      JWT_SECRET_KEY: local-dev-only-jwt-secret-not-for-production
       # hf_xet (huggingface_hub's fast-transfer backend) stalls badly over Docker
       # Desktop's WSL2 NAT — falls back to the plain HTTP downloader instead.
       HF_HUB_DISABLE_XET: "1"
