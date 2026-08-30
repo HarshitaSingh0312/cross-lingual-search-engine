@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.db.base import engine
 from app.main import app
+from app.services.cache_service import cache_service
 from app.services.retrieval_service import retrieval_service
 
 if sys.platform == "win32":
@@ -27,6 +28,10 @@ async def _dispose_engine_pool():
     # connections tied to a now-dead one ("attached to a different loop").
     yield
     await engine.dispose()
+    # Same loop-affinity issue applies to the Redis client - close it and let cache_service
+    # lazily reconnect on the next test's (fresh) event loop.
+    await cache_service.close()
+    cache_service._client = None
 
 
 @pytest.fixture

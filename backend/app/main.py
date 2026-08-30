@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.v1 import admin, auth, feedback, health, me, search
+from app.services.cache_service import cache_service
 from app.services.retrieval_service import retrieval_service
 
 
@@ -10,6 +11,7 @@ from app.services.retrieval_service import retrieval_service
 async def lifespan(app: FastAPI):
     retrieval_service.load()  # load the embedding model once, not per-request
     yield
+    await cache_service.close()
 
 
 app = FastAPI(title="Cross-Lingual Search Engine", lifespan=lifespan)
