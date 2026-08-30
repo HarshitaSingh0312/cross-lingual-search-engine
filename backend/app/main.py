@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import admin, auth, health, search
+from app.api.v1 import admin, auth, feedback, health, me, search
 from app.services.retrieval_service import retrieval_service
 
 
@@ -18,3 +18,5 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+app.include_router(feedback.router, prefix="/api/v1")
+app.include_router(me.router, prefix="/api/v1")

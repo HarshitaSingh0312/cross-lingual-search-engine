@@ -62,3 +62,58 @@ class Embedding(Base):
             postgresql_ops={"vector": "vector_cosine_ops"},
         ),
     )
+
+
+class SearchQuery(Base):
+    __tablename__ = "search_queries"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # Nullable: search is usable while logged out, so not every query has an owner.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    query_text: Mapped[str] = mapped_column(Text)
+    model_used: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    results: Mapped[list["SearchResult"]] = relationship(back_populates="search_query")
+
+
+class SearchResult(Base):
+    __tablename__ = "search_results"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    search_query_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("search_queries.id", ondelete="CASCADE"))
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"))
+    rank: Mapped[int] = mapped_column()
+    score: Mapped[float] = mapped_column()
+
+    search_query: Mapped["SearchQuery"] = relationship(back_populates="results")
+
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    search_result_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("search_results.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    is_relevant: Mapped[bool] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    __table_args__ = (
+        # One vote per (result, user) for logged-in users, so resubmitting updates rather than
+        # duplicates. Doesn't dedupe anonymous votes (user_id NULL) - Postgres treats every NULL
+        # as distinct in a unique index, and there's no identity to key an anonymous vote on anyway.
+        Index("ix_feedback_result_user_unique", "search_result_id", "user_id", unique=True),
+    )
+
+
+class Bookmark(Base):
+    __tablename__ = "bookmarks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    document: Mapped["Document"] = relationship()
+
+    __table_args__ = (Index("ix_bookmarks_user_document_unique", "user_id", "document_id", unique=True),)
