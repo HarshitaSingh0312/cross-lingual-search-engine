@@ -6,6 +6,7 @@ from app.core.config import get_settings
 from app.db.base import get_db
 from app.db.models import SearchQuery, SearchResult, User
 from app.schemas.search import SearchResponse
+from app.services.cache_service import cache_service
 from app.services.retrieval_service import retrieval_service
 
 router = APIRouter(tags=["search"])
@@ -19,10 +20,15 @@ async def search(
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_optional_current_user),
 ) -> SearchResponse:
-    results = await retrieval_service.search(db, q, top_k=top_k)
+    cache_key = cache_service.make_key(q, top_k)
+    results = await cache_service.get(cache_key)
+    if results is None:
+        results = await retrieval_service.search(db, q, top_k=top_k)
+        await cache_service.set(cache_key, results)
 
-    # Logged here (not in retrieval_service) so the service stays pure retrieval logic -
-    # history/feedback are a request-handling concern, not something a search call itself needs.
+    # Logged on every call, cache hit or not - it's still a real search event, and the result
+    # rows below need fresh ids for feedback to target even when the content came from cache.
+    # Kept in the router (not retrieval_service) so the service stays pure retrieval logic.
     query_row = SearchQuery(
         user_id=user.id if user else None,
         query_text=q,

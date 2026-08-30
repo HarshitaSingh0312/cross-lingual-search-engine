@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    redis_url: str = "redis://localhost:6379/0"
+    cache_ttl_seconds: int = 300
+
     @property
     def async_database_url(self) -> str:
         """asyncpg driver, used by the running app. asyncpg doesn't understand
