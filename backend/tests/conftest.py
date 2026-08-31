@@ -4,9 +4,10 @@ import sys
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.db.base import engine
+from app.db.base import async_session, engine
 from app.main import app
 from app.services.cache_service import cache_service
+from app.services.hybrid_search import hybrid_search_service
 from app.services.retrieval_service import retrieval_service
 
 if sys.platform == "win32":
@@ -18,6 +19,16 @@ if sys.platform == "win32":
 @pytest.fixture(scope="session", autouse=True)
 def _load_model():
     retrieval_service.load()
+
+
+@pytest.fixture(autouse=True)
+async def _load_hybrid_index():
+    # hybrid_search_service.load() is idempotent (no-ops once self.bm25 is set), so this only
+    # ever does real work - and opens a DB connection - on the first test that needs it. That
+    # connection belongs to that test's own event loop, same loop-affinity constraint as below.
+    if hybrid_search_service.bm25 is None:
+        async with async_session() as db:
+            await hybrid_search_service.load(db)
 
 
 @pytest.fixture(autouse=True)

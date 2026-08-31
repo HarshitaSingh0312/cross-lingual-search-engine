@@ -28,11 +28,13 @@ class CacheService:
         return self._client
 
     @staticmethod
-    def make_key(query: str, top_k: int) -> str:
+    def make_key(query: str, top_k: int, method: str = settings.embedding_model_name) -> str:
         # Case/whitespace-insensitive on purpose: "AI" and "ai" get the same cached results,
         # trading a little cache precision for a meaningfully higher hit rate.
+        # `method` namespaces the key so /search and /search/hybrid never collide, since a
+        # dense-only result set isn't a valid cached answer for a hybrid request or vice versa.
         normalized = query.strip().lower()
-        return f"search:{settings.embedding_model_name}:{top_k}:{normalized}"
+        return f"search:{method}:{top_k}:{normalized}"
 
     async def get(self, key: str) -> list[dict] | None:
         try:
