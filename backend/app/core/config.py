@@ -11,6 +11,9 @@ class Settings(BaseSettings):
 
     embedding_model_name: str = "sentence-transformers/LaBSE"
     embedding_dim: int = 768
+    # Multilingual (trained on mMARCO, covers en/es/fr) so it can score a query against a
+    # candidate doc in any language without translation - small enough for CPU reranking.
+    cross_encoder_model_name: str = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 
     # Existing ML core lives one level up from backend/; ingestion reads its cached data.
     ml_core_dir: str = "../cross_lingual_retrieval"

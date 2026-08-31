@@ -3,13 +3,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.v1 import admin, auth, feedback, health, me, search
+from app.db.base import async_session
 from app.services.cache_service import cache_service
+from app.services.hybrid_search import hybrid_search_service
 from app.services.retrieval_service import retrieval_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     retrieval_service.load()  # load the embedding model once, not per-request
+    async with async_session() as db:
+        await hybrid_search_service.load(db)  # builds the BM25 index, loads the cross-encoder
     yield
     await cache_service.close()
 
