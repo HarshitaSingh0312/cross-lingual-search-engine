@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.models import Document
-from app.services.retrieval_service import retrieval_service
+from app.services.retrieval_service import retrieval_service, run_inference
 
 settings = get_settings()
 
@@ -86,7 +86,12 @@ class HybridSearchService:
                 }
 
         pairs = [(query, f"{docs_by_id[cid]['title']} {docs_by_id[cid]['summary']}") for cid in candidate_ids]
-        rerank_scores = self.cross_encoder.predict(pairs) if pairs else []
+        # Same event-loop-blocking issue as the dense encoder (see retrieval_service.search),
+        # and worse here - the cross-encoder pass is this app's single slowest call. Goes
+        # through the same throttled run_inference (not a bare to_thread) so a burst of hybrid
+        # searches shares the same concurrent-inference budget as plain dense searches instead
+        # of each fanning out independently - see retrieval_service.py's module-level comment.
+        rerank_scores = await run_inference(self.cross_encoder.predict, pairs) if pairs else []
         reranked = sorted(zip(candidate_ids, rerank_scores), key=lambda pair: pair[1], reverse=True)[:top_k]
 
         results = []
