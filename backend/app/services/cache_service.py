@@ -2,11 +2,16 @@ import json
 import logging
 
 import redis.asyncio as redis
+from prometheus_client import Counter
 
 from app.core.config import get_settings
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+# Labeled by method (dense/hybrid, parsed from the cache key) so Grafana can graph hit rate
+# per search method, not just in aggregate - dense and hybrid have very different cost-of-miss.
+cache_requests_total = Counter("cache_requests_total", "Search cache lookups", ["method", "result"])
 
 
 class CacheService:
@@ -36,12 +41,20 @@ class CacheService:
         normalized = query.strip().lower()
         return f"search:{method}:{top_k}:{normalized}"
 
+    @staticmethod
+    def _method_label(key: str) -> str:
+        # Keys look like "search:<method>:<top_k>:<query>" (see make_key) - the label is
+        # parsed rather than threaded through every get()/set() call as an extra argument.
+        parts = key.split(":", 2)
+        return parts[1] if len(parts) > 1 else "unknown"
+
     async def get(self, key: str) -> list[dict] | None:
         try:
             raw = await self._get_client().get(key)
         except Exception:
             logger.warning("cache read failed, falling back to a live search", exc_info=True)
             return None
+        cache_requests_total.labels(method=self._method_label(key), result="hit" if raw is not None else "miss").inc()
         return json.loads(raw) if raw is not None else None
 
     async def set(self, key: str, value: list[dict], ttl: int | None = None) -> None:
@@ -49,6 +62,12 @@ class CacheService:
             await self._get_client().set(key, json.dumps(value), ex=ttl or settings.cache_ttl_seconds)
         except Exception:
             logger.warning("cache write failed, results just won't be cached this time", exc_info=True)
+
+    async def ping(self) -> bool:
+        try:
+            return await self._get_client().ping()
+        except Exception:
+            return False
 
     async def close(self) -> None:
         if self._client is not None:
