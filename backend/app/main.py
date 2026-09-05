@@ -34,7 +34,16 @@ app = FastAPI(title="Cross-Lingual Search Engine", lifespan=lifespan)
 
 # Auto-instruments every route with request-count/latency histograms and exposes them at
 # /metrics (outside the /api/v1 prefix - Prometheus scrapes it directly, it's not an API call).
-Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+# latency_lowr_buckets is the per-handler histogram (the one Grafana's dashboard and
+# load-test percentile queries group `by (handler)`) - its default (0.1, 0.5, 1) tops out at
+# 1s, so anything slower (e.g. uncached hybrid search, ~4-5s) silently clips to ~1s in every
+# histogram_quantile() query instead of reporting its real latency. Widened to actually cover
+# this app's slowest known endpoint. The library keeps this histogram's bucket count small on
+# purpose (it's multiplied by every handler+method combo, unlike the unlabeled high-r one) -
+# matching the fewest buckets that still cover the real range, not maximizing resolution.
+Instrumentator().instrument(
+    app, latency_lowr_buckets=(0.05, 0.1, 0.25, 0.5, 0.75, 1, 2, 3, 5, 7.5, 10)
+).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 @app.middleware("http")

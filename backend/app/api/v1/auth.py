@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -29,7 +30,12 @@ async def signup(body: UserCreate, db: AsyncSession = Depends(get_db)) -> Token:
 
     # Role is never taken from the request body — every new signup is a plain "user";
     # promoting to admin is a deliberate out-of-band action (see scripts/promote_admin.py).
-    user = User(email=body.email, hashed_password=hash_password(body.password))
+    # bcrypt is deliberately slow (that's its whole point) - run off the event loop so one
+    # signup/login doesn't stall every other concurrent request (see retrieval_service.search
+    # for the same fix on the encode call; both were confirmed as bottlenecks in Phase 12's
+    # load test).
+    hashed = await asyncio.to_thread(hash_password, body.password)
+    user = User(email=body.email, hashed_password=hashed)
     db.add(user)
     await db.commit()
     await db.refresh(user)
@@ -47,7 +53,7 @@ async def login(
 ) -> Token:
     # OAuth2PasswordRequestForm's field is called "username" by spec; we treat it as the email.
     user = await db.scalar(select(User).where(User.email == form_data.username))
-    if user is None or not verify_password(form_data.password, user.hashed_password):
+    if user is None or not await asyncio.to_thread(verify_password, form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

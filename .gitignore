@@ -22,6 +22,8 @@ cross_lingual_retrieval/colab_encoding/
 # Personal planning docs — not for the public repo
 explanation_for_you.md
 PROJECT_PLAN.md
+ZS_interview_prep.md
+ZS_interview_prep.html
 
 # IDE / OS
 .vscode/
@@ -34,3 +36,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Load test run output (regenerable, not source)
+backend/loadtest/results/
