@@ -8,6 +8,7 @@ from app.db.base import async_session, engine
 from app.main import app
 from app.services.cache_service import cache_service
 from app.services.hybrid_search import hybrid_search_service
+from app.services.rag_service import rag_service
 from app.services.retrieval_service import retrieval_service
 
 if sys.platform == "win32":
@@ -43,6 +44,8 @@ async def _dispose_engine_pool():
     # lazily reconnect on the next test's (fresh) event loop.
     await cache_service.close()
     cache_service._client = None
+    await rag_service.close()
+    rag_service._client = None
 
 
 @pytest.fixture
