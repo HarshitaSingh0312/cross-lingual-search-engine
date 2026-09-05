@@ -2,9 +2,12 @@ import uuid
 
 from sqlalchemy import delete, update
 
+from app.core.config import get_settings
 from app.db.base import async_session
 from app.db.models import User, UserRole
-from app.services.cache_service import cache_service
+from app.services.cache_service import cache_requests_total, cache_service
+
+settings = get_settings()
 
 
 async def test_search_populates_the_cache(client):
@@ -33,6 +36,19 @@ async def test_repeated_search_returns_the_same_documents(client):
 
 def test_cache_key_is_case_and_whitespace_insensitive():
     assert cache_service.make_key("Climate Change", 5) == cache_service.make_key("  climate change  ", 5)
+
+
+async def test_cache_hits_and_misses_are_counted_per_method(client):
+    method = settings.embedding_model_name  # the /search route's default cache-key method
+    before_miss = cache_requests_total.labels(method=method, result="miss")._value.get()
+    before_hit = cache_requests_total.labels(method=method, result="hit")._value.get()
+
+    params = {"q": "quantum computing basics", "top_k": 2}
+    await client.get("/api/v1/search", params=params)  # cold - miss
+    await client.get("/api/v1/search", params=params)  # cached - hit
+
+    assert cache_requests_total.labels(method=method, result="miss")._value.get() == before_miss + 1
+    assert cache_requests_total.labels(method=method, result="hit")._value.get() == before_hit + 1
 
 
 async def test_warm_popular_cache_requires_admin(client):

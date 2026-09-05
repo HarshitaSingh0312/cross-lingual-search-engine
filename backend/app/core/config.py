@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     database_url: str
 
+    log_level: str = "INFO"
+
     embedding_model_name: str = "sentence-transformers/LaBSE"
     embedding_dim: int = 768
     # Multilingual (trained on mMARCO, covers en/es/fr) so it can score a query against a
