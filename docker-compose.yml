@@ -38,6 +38,9 @@ services:
       # hf_xet (huggingface_hub's fast-transfer backend) stalls badly over Docker
       # Desktop's WSL2 NAT — falls back to the plain HTTP downloader instead.
       HF_HUB_DISABLE_XET: "1"
+      # Pulled from the host shell's own env, never hardcoded here — unlike JWT_SECRET_KEY
+      # above, this is a real external secret. Empty is fine: /search/rag just returns 503.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "8000:8000"
     depends_on:

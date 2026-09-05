@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     cache_ttl_seconds: int = 300
 
+    # Empty by default so the app boots fine without it - /search/rag just returns 503
+    # instead of the whole server failing to start over one optional feature's missing key.
+    anthropic_api_key: str = ""
+    rag_model_name: str = "claude-haiku-4-5-20251001"
+    rag_max_tokens: int = 600
+
     @property
     def async_database_url(self) -> str:
         """asyncpg driver, used by the running app. asyncpg doesn't understand
